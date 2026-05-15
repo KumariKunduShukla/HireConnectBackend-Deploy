@@ -1,0 +1,281 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: hireconnect-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-password}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:alpine
+    container_name: hireconnect-redis
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  discovery-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.microservice
+      args:
+        SERVICE_NAME: discovery-server
+    container_name: hireconnect-discovery
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.microservice
+      args:
+        SERVICE_NAME: api-gateway
+    container_name: hireconnect-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.microservice
+      args:
+        SERVICE_NAME: auth-service
+    container_name: hireconnect-auth
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/hireconnect_auth?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-root}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-password}
+      - REDIS_HOST=redis
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+
+  profile-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.microservice
+      args:
+        SERVICE_NAME: profile-service
+    container_name: hireconnect-profile
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/hireconnect_profile?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-root}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-password}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+    depends_on:
+      mysql:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+
+  job-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.microservice
+      args:
+        SERVICE_NAME: job-service
+    container_name: hireconnect-job
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/hireconnect_jobs?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-root}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-password}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+    depends_on:
+      mysql:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+
+  application-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.microservice
+      args:
+        SERVICE_NAME: application-service
+    container_name: hireconnect-application
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/hireconnect_applications?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-root}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-password}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_RABBITMQ_HOST=rabbitmq
+    depends_on:
+      mysql:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.microservice
+      args:
+        SERVICE_NAME: notification-service
+    container_name: hireconnect-notification
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/hireconnect_notifications?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-root}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-password}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - SPRING_RABBITMQ_HOST=rabbitmq
+    depends_on:
+      mysql:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+
+  subscription-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.microservice
+      args:
+        SERVICE_NAME: subscription-service
+    container_name: hireconnect-subscription
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/hireconnect_subscriptions?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-root}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-password}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
+      - SPRING_RABBITMQ_HOST=rabbitmq
+    depends_on:
+      mysql:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+
+  interview-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.microservice
+      args:
+        SERVICE_NAME: interview-service
+    container_name: hireconnect-interview
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/hireconnect_interviews?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-root}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-password}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_RABBITMQ_HOST=rabbitmq
+    depends_on:
+      mysql:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+
+  analytics-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.microservice
+      args:
+        SERVICE_NAME: analytics-service
+    container_name: hireconnect-analytics
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: "C:/Users/Kundu/Desktop/HireConnect/Frontend/HireConnect-Platform-Frontend/hireconnect-frontend"
+      dockerfile: Dockerfile
+    container_name: hireconnect-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+
+  sonar-db:
+    image: postgres:15
+    container_name: hireconnect-sonar-db
+    environment:
+      - POSTGRES_USER=sonar
+      - POSTGRES_PASSWORD=sonar
+      - POSTGRES_DB=sonarqube
+    volumes:
+      - sonar_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sonar -d sonarqube"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: hireconnect-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  sonarqube:
+    image: sonarqube:9.9-community
+    container_name: hireconnect-sonarqube
+    ports:
+      - "9000:9000"
+    environment:
+      - SONAR_JDBC_URL=jdbc:postgresql://sonar-db:5432/sonarqube
+      - SONAR_JDBC_USERNAME=sonar
+      - SONAR_JDBC_PASSWORD=sonar
+    depends_on:
+      sonar-db:
+        condition: service_healthy
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_extensions:/opt/sonarqube/extensions
+
+volumes:
+  mysql_data:
+  sonar_db_data:
+  sonarqube_data:
+  sonarqube_logs:
+  sonarqube_extensions:

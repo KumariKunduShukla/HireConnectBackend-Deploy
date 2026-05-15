@@ -1,0 +1,5 @@
+/.metadata/
+
+# Local Spring overrides (may contain passwords)
+**/application-local.yml
+**/application-local.properties

@@ -1,0 +1,142 @@
+server:
+  port: 8080
+
+spring:
+  codec:
+    max-in-memory-size: 10MB
+  application:
+    name: API-GATEWAY
+  cloud:
+    gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+
+      globalcors:
+        add-to-simple-url-handler-mapping: true
+        cors-configurations:
+          "[/**]":
+            allowed-origins:
+              - "http://localhost:3000"
+              - "http://localhost:3001"
+              - "http://127.0.0.1:3000"
+              - "http://127.0.0.1:3001"
+              - "http://localhost:8080"
+              - "http://127.0.0.1:8080"
+            allowed-methods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+            allowed-headers: "*"
+            allow-credentials: true
+            max-age: 3600
+
+      routes:
+        - id: auth-admin-service-v1
+          uri: lb://AUTH-SERVICE
+          predicates:
+            - Path=/api/v1/auth/admin/**
+          filters:
+            - RewritePath=/api/v1/auth/admin/?(?<segment>.*), /auth/admin/$\{segment}
+          order: 1
+
+        - id: auth-service-v1
+          uri: lb://AUTH-SERVICE
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - RewritePath=/api/v1/auth/?(?<segment>.*), /auth/$\{segment}
+            # Retry smooths over short Eureka stale-instance windows during service restarts.
+            - name: Retry
+              args:
+                retries: 2
+                methods: GET,POST
+                statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE,GATEWAY_TIMEOUT
+          order: 2
+
+        - id: profile-service-v1
+          uri: lb://PROFILE-SERVICE
+          predicates:
+            - Path=/api/v1/profiles/**
+          filters:
+            - RewritePath=/api/v1/profiles/?(?<segment>.*), /api/profiles/$\{segment}
+          order: 3
+
+        - id: job-service-v1
+          uri: lb://JOB-SERVICE
+          predicates:
+            - Path=/api/v1/jobs/**
+          filters:
+            - RewritePath=/api/v1/jobs/?(?<segment>.*), /api/jobs/$\{segment}
+          order: 4
+
+        - id: application-service-v1
+          uri: lb://APPLICATION-SERVICE
+          predicates:
+            - Path=/api/v1/applications/**
+          filters:
+            - RewritePath=/api/v1/applications/?(?<segment>.*), /api/applications/$\{segment}
+          order: 5
+
+        - id: interview-service-v1
+          uri: lb://INTERVIEW-SERVICE
+          predicates:
+            - Path=/api/v1/interviews/**
+          filters:
+            - RewritePath=/api/v1/interviews/?(?<segment>.*), /api/interviews/$\{segment}
+          order: 6
+
+        - id: notification-service-v1
+          uri: lb://NOTIFICATION-SERVICE
+          predicates:
+            - Path=/api/v1/notifications/**
+          filters:
+            - RewritePath=/api/v1/notifications/?(?<segment>.*), /api/notifications/$\{segment}
+          order: 7
+
+        - id: subscription-service-v1
+          uri: lb://SUBSCRIPTION-SERVICE
+          predicates:
+            - Path=/api/v1/subscriptions/**
+          filters:
+            - RewritePath=/api/v1/subscriptions/?(?<segment>.*), /api/subscriptions/$\{segment}
+          order: 8
+
+        - id: analytics-service-v1
+          uri: lb://ANALYTICS-SERVICE
+          predicates:
+            - Path=/api/v1/analytics/**
+          filters:
+            - RewritePath=/api/v1/analytics/?(?<segment>.*), /api/analytics/$\{segment}
+          order: 9
+
+      httpclient:
+        connect-timeout: 10000
+        response-timeout: 30s
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    gateway:
+      enabled: true
+    health:
+      show-details: when_authorized
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: DEBUG
