@@ -159,9 +159,6 @@ public class NotificationServiceImpl implements NotificationService {
                               <tr><td style="padding: 10px 0; border-bottom: 1px solid #eee;"><strong>Link:</strong> %s</td></tr>
                               <tr><td style="padding: 10px 0;"><strong>Notes:</strong> %s</td></tr>
                             </table>
-                            <div style="text-align: center; margin-top: 30px;">
-                              <a href="http://localhost:3000/dashboard" style="background-color: #4f46e5; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">View Dashboard</a>
-                            </div>
                           </div>
                         </div>
                       </body>
@@ -180,9 +177,6 @@ public class NotificationServiceImpl implements NotificationService {
                           </div>
                           <div style="padding: 40px 32px; text-align: center;">
                             <p style="font-size: 16px; color: #475569;">%s</p>
-                            <div style="margin-top: 30px;">
-                              <a href="http://localhost:3000/dashboard" style="background-color: #10b981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">View Dashboard</a>
-                            </div>
                           </div>
                         </div>
                       </body>
@@ -200,9 +194,6 @@ public class NotificationServiceImpl implements NotificationService {
                           </div>
                           <div style="padding: 30px;">
                             <p>%s</p>
-                            <div style="text-align: center; margin-top: 20px;">
-                              <a href="http://localhost:3000/dashboard" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px;">Go to Dashboard</a>
-                            </div>
                           </div>
                         </div>
                       </body>
